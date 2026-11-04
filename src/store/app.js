@@ -20,7 +20,17 @@ const langs = {
   'zh-TW': { name: '中文繁体', value: zhTw, sideBarWidth: '210px' },
   'pt-BR': { name: 'Português', value: ptBr, sideBarWidth: '250px' },
 }
-const defaultLang = localStorage.getItem('lang') || navigator.language || 'zh-CN'
+// Browsers report region tags (en-US, fr-CA, zh-HK); map them to a supported language
+function matchLang (lang) {
+  if (!lang) return ''
+  if (langs[lang]) return lang
+  const [base, region = ''] = lang.toLowerCase().split('-')
+  if (base === 'zh' && /^(tw|hk|mo|hant)$/.test(region)) return 'zh-TW'
+  return Object.keys(langs).find(k => k.toLowerCase().split('-')[0] === base) || ''
+}
+const defaultLang = matchLang(localStorage.getItem('lang'))
+  || [...(navigator.languages || []), navigator.language].map(matchLang).find(l => l)
+  || 'en'
 export const useAppStore = defineStore({
   id: 'App',
   state: () => ({
