@@ -102,6 +102,8 @@ export async function getPeerSlat (id) {
 
 }
 
+// Share links open in the web client served at /webclient/, which signs nobody in: it opens
+// just the shared device. The token is URL-encoded in case the server ever changes its format.
 export function getV2ShareUrl (token) {
-  return `${app.setting.rustdeskConfig.api_server}/webclient2/#/?share_token=${token}`
+  return `${app.setting.rustdeskConfig.api_server}/webclient/#/?share_token=${encodeURIComponent(token)}`
 }
