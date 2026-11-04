@@ -10,24 +10,33 @@ import { useAppStore } from '@/store/app'
 const app = useAppStore()
 
 export const toWebClientLink = (row) => {
-  //v2
-  console.log(app.setting.rustdeskConfig)
-  window.open(`${app.setting.rustdeskConfig.api_server}/webclient2/#/${row.id}`)
+  // webclient2 was removed upstream; the v1 web client prefills the ID from #/<id>
+  window.open(`${app.setting.rustdeskConfig.api_server}/webclient/#/${encodeURIComponent(row.id)}`)
+}
+
+// WebSocket URL for hbbs (id) or hbbr (relay). On https pages the raw 21118/21119 ports
+// only speak plain WebSocket, so go through the reverse proxy's /ws/id and /ws/relay paths.
+const wsUrl = (server, relay) => {
+  const [addr, port] = (server || '').split(':')
+  if (location.protocol === 'https:') {
+    return `wss://${addr}/ws/${relay ? 'relay' : 'id'}`
+  }
+  const base = parseInt(port) || (relay ? 21117 : 21116)
+  return `ws://${addr}:${base + 2}`
 }
 
 export async function getPeerSlat (id) {
-  const [addr, port] = app.setting.rustdeskConfig.id_server.split(':')
-  if (!addr) {
+  const idServer = app.setting.rustdeskConfig.id_server
+  if (!idServer || !idServer.split(':')[0]) {
     return
   }
-  const scheme = location.protocol === 'https:' ? 'wss' : 'ws'
-  const ws = new Websock(`${scheme}://${addr}:21118`, true)
+  const ws = new Websock(wsUrl(idServer, false), true)
   await ws.open()
   const conn_type = rendezvous.ConnType.DEFAULT_CONN
   const nat_type = rendezvous.NatType.SYMMETRIC
   const punch_hole_request = rendezvous.PunchHoleRequest.fromPartial({
     id,
-    licence_key: app.setting.rustdeskConfig.value.key || undefined,
+    licence_key: app.setting.rustdeskConfig.key || undefined,
     conn_type,
     nat_type,
     token: undefined,
@@ -41,8 +50,8 @@ export async function getPeerSlat (id) {
   const rr = msg.relay_response
   if (phr) {
     if (phr?.other_failure) {
-      this.msgbox('error', 'Error', phr?.other_failure)
-      return
+      ElMessageBox.alert(phr.other_failure, T('Error'))
+      return false
     }
     if (phr.failure != rendezvous.PunchHoleResponse_Failure.UNRECOGNIZED) {
       switch (phr?.failure) {
@@ -65,7 +74,7 @@ export async function getPeerSlat (id) {
     const uuid = rr.uuid
     console.log(new Date() + ': Connecting to relay server')
 
-    const _ws = new Websock(`${scheme}://${addr}:21119`, false)
+    const _ws = new Websock(wsUrl(rr.relay_server || app.setting.rustdeskConfig.relay_server || idServer, true), false)
     await _ws.open()
     console.log(new Date() + ': Connected to relay server')
     const request_relay = rendezvous.RequestRelay.fromPartial({
@@ -74,7 +83,7 @@ export async function getPeerSlat (id) {
     })
     _ws.sendRendezvous({ request_relay })
 
-    //暂不支持pk
+    // public key not supported yet
     const public_key = message.PublicKey.fromPartial({})
     _ws?.sendMessage({ public_key })
     // const secure = (await this.secure(pk)) || false;

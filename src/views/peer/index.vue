@@ -335,6 +335,7 @@
     username: '',
     uuid: '',
     version: '',
+    alias: '',
   })
 
   const toEdit = (row) => {
@@ -348,6 +349,8 @@
     formVisible.value = true
     //重置formData
     formData.row_id = 0
+    formData.group_id = null
+    formData.alias = ''
     formData.cpu = ''
     formData.hostname = ''
     formData.id = ''

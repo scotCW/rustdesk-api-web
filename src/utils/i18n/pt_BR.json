@@ -561,5 +561,11 @@
   },
   "Remark": {
     "One": "Observações"
+  },
+  "HideTabs": {
+    "One": "Ocultar abas"
+  },
+  "ShowTabs": {
+    "One": "Mostrar abas"
   }
 }
